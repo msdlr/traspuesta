@@ -8,12 +8,13 @@
 
 StopWatchInterface *hTimer = NULL;
 
-#define BLOCK_SIZE ???
+int BLOCK_SIZE = 0;
 
-
+#ifdef DOUBLE
+typedef double element; 
+#else
 typedef float element; 
-//typedef double element; 
-
+#endif
 
 // Function for generating random values for a matrix
 void LoadStartValuesIntoMatrixRand(element *M, unsigned int mh, unsigned int mw)
@@ -61,7 +62,18 @@ void sTransposeRow (element *Min, element *Mout, unsigned int mh, unsigned int m
        Mout[j*mh+i] = Min[i*mw+j];
 }
 
+__global__ void TransposeCol(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
 
+}
+__global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+
+}
+__global__ void TransposeGM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+
+}
+__global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+
+}
 
 // CUDA Kernels
 
@@ -89,16 +101,17 @@ int main(int argc, char **argv)
    unsigned int op, debug;
    struct timeval start, stop;
 
-   if (argc == 5)
+   if (argc == 6)
      {
        op = atoi(argv[1]);
        mh = atoi(argv[2]);
        mw = atoi(argv[3]);
-       debug = atoi(argv[4]);
+       BLOCK_SIZE = atoi(argv[4]);
+       debug = atoi(argv[5]);
      }
    else
      {
-       printf("Sintaxis: <ejecutable> option Mheight Mwidth debug\n\n");
+       printf("Sintaxis: <ejecutable> option Mheight Mwidth BLOCK_SIZE debug\n\n");
        printf("option:  0  A thread copies a component of the matrix\n");
        printf("         1  A thread computes a row of the matrix\n");
        printf("         2  A thread computes a column of the matrix\n");
