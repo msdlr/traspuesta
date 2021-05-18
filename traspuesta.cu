@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <helper_cuda.h>
 #include <helper_timer.h>
+#include <math.h>
 
 StopWatchInterface *hTimer = NULL;
 
@@ -77,7 +78,7 @@ __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh
       out = (col*mh) + fila;   // Offset respecto a matriz de salida
       // mh será la anchura (mw) de la matriz traspuesta y viceversa !!!
       d_Mout[out] = d_Min[in];
-      if (debug == 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]",fila * mw,col,fila*col,mh);
+      if (debug == 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",(fila * mw)%mh,col,(fila*col)%mw,mh);
     }
   }
 }
@@ -195,9 +196,12 @@ int main(int argc, char **argv)
          grid=dim3(mw/threads.x,mh/threads.y);
          break;
        case  1:
-         threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
-         grid=dim3(mh/threads.x);
-         break;
+         BLOCK_SIZE = (int)ceil(sqrt(mh));
+	 printf("Block_size is <%d>\n", BLOCK_SIZE);
+	 threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
+         grid=dim3((int)ceil((double)mh/threads.x));
+         printf("Grid is <%d>,\n", grid.x);
+	 break;
        case  2:
          threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
          grid=dim3(mw/threads.x);
