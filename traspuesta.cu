@@ -67,17 +67,17 @@ __global__ void TransposeCol(element * d_Min , element * d_Mout, unsigned int mh
 }
 __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
   unsigned int col;
-  unsigned int this_thread = blockIdx.x*blockDim.x + threadIdx.x; // Identificador de hilo
+  unsigned int fila = blockIdx.x*blockDim.x + threadIdx.x; // Fila = Identificador de hilo
   unsigned int in;  // Offsets para los punteros
   unsigned int out; // Offsets para los punteros
 
-  if (this_thread < mh){
+  if (fila < mh){
     for (col = 0; col < mw; col++) { // Desde columna 0 hasta la máxima -1
-      in = (this_thread * mw) + col;  // Offset respecto a matriz de entrada
-      out = (this_thread*col) + mh;   // Offset respecto a matriz de salida
+      in = (fila * mw) + col;  // Offset respecto a matriz de entrada
+      out = (col*mh) + fila;   // Offset respecto a matriz de salida
       // mh será la anchura (mw) de la matriz traspuesta y viceversa !!!
       d_Mout[out] = d_Min[in];
-      if (debug == 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]",this_thread * mw,col,this_thread*col,mh);
+      if (debug == 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]",fila * mw,col,fila*col,mh);
     }
   }
 }
