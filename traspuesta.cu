@@ -77,6 +77,7 @@ __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh
       out = (this_thread*col) + mh;   // Offset respecto a matriz de salida
       // mh será la anchura (mw) de la matriz traspuesta y viceversa !!!
       d_Mout[out] = d_Min[in];
+      printf("d_Mout[%d][%d] = d_Min[%d][%d]",this_thread * mw,col,this_thread*col,mh);
     }
   }
 }
