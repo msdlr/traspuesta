@@ -55,18 +55,30 @@ void PrintMatrix(element *M, unsigned int mh, unsigned int mw)
 // Function transpose sequential (rows)
 void sTransposeRow (element *Min, element *Mout, unsigned int mh, unsigned int mw)
 {
-  unsigned int i, j;
+  unsigned int fila, col;
 
-  for (i=0;i<mh;++i)
-    for (j=0;j<mw;++j) 
-       Mout[j*mh+i] = Min[i*mw+j];
+  for (fila=0;fila<mh;++fila)
+    for (col=0;col<mw;++col) 
+       Mout[col*mh+fila] = Min[fila*mw+col];
 }
 
 __global__ void TransposeCol(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
-
+  
 }
 __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+  unsigned int col;
+  unsigned int this_thread = blockIdx.x*blockDim.x + threadIdx.x; // Identificador de hilo
+  unsigned int in;  // Offsets para los punteros
+  unsigned int out; // Offsets para los punteros
 
+  if (this_thread < mh){
+    for (col = 0; col < mw; col++) { // Desde columna 0 hasta la máxima -1
+      in = (this_thread * mw) + col;  // Offset respecto a matriz de entrada
+      out = (this_thread*col) + mh;   // Offset respecto a matriz de salida
+      // mh será la anchura (mw) de la matriz traspuesta y viceversa !!!
+      d_Mout[out] = d_Min[in];
+    }
+  }
 }
 __global__ void TransposeGM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
 
