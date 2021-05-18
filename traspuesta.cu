@@ -192,22 +192,25 @@ int main(int argc, char **argv)
        case  0:
        case  3:
        case  4:
-         threads=dim3(BLOCK_SIZE,BLOCK_SIZE);
-         grid=dim3(mw/threads.x,mh/threads.y);
+         if(mw>mh){         
+	   BLOCK_SIZE =mw;
+	 }else BLOCK_SIZE = mh;			
+	 threads=dim3(BLOCK_SIZE,BLOCK_SIZE);
+         grid=dim3((int)ceil((double)mw/threads.x),(int)ceil((double)mh/threads.y));
          break;
        case  1:
          BLOCK_SIZE = (int)ceil(sqrt(mh));
-	 printf("Block_size is <%d>\n", BLOCK_SIZE);
 	 threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
          grid=dim3((int)ceil((double)mh/threads.x));
-         printf("Grid is <%d>,\n", grid.x);
 	 break;
        case  2:
-         threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
-         grid=dim3(mw/threads.x);
+         BLOCK_SIZE = (int)ceil(sqrt(mw));
+	 threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
+         grid=dim3((int)ceil((double)mw/threads.x));
          break;
      }
-
+   printf("Block_size is <%d> <%d>\n", threads.x, threads.y);  
+   printf("Grid is <%d> <%d>,\n", grid.x, grid.y);
    // timers
    sdkCreateTimer(&hTimer);
    sdkResetTimer(&hTimer);
