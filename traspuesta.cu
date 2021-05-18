@@ -62,10 +62,10 @@ void sTransposeRow (element *Min, element *Mout, unsigned int mh, unsigned int m
        Mout[col*mh+fila] = Min[fila*mw+col];
 }
 
-__global__ void TransposeCol(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+__global__ void TransposeCol(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
   
 }
-__global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+__global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
   unsigned int col;
   unsigned int this_thread = blockIdx.x*blockDim.x + threadIdx.x; // Identificador de hilo
   unsigned int in;  // Offsets para los punteros
@@ -77,14 +77,14 @@ __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh
       out = (this_thread*col) + mh;   // Offset respecto a matriz de salida
       // mh será la anchura (mw) de la matriz traspuesta y viceversa !!!
       d_Mout[out] = d_Min[in];
-      printf("d_Mout[%d][%d] = d_Min[%d][%d]",this_thread * mw,col,this_thread*col,mh);
+      if (debug == 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]",this_thread * mw,col,this_thread*col,mh);
     }
   }
 }
-__global__ void TransposeGM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+__global__ void TransposeGM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
 
 }
-__global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw){
+__global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
 
 }
 
@@ -92,7 +92,7 @@ __global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh,
 
 // Reference: copy a matrix
 // A thread copy a component  -  using global memory
-__global__ void CopyMat (element *Min, element *Mout, unsigned int mh, unsigned int mw)
+__global__ void CopyMat (element *Min, element *Mout, unsigned int mh, unsigned int mw, unsigned int debug)
 {
    unsigned int i, j;
 
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
      }
 
    // kernel pointer
-   void (*kernel)(element *, element *, unsigned int, unsigned int);
+   void (*kernel)(element *, element *, unsigned int, unsigned int, unsigned int /* debug */);
 
    switch (op)
      {
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
    // execute programs
    if ((0<=op) && (op<5))
      {
-       kernel<<< grid, threads >>>(d_Min, d_Mout, mh, mw);
+       kernel<<< grid, threads >>>(d_Min, d_Mout, mh, mw,debug);
        cudaThreadSynchronize();	
        sdkStopTimer(&hTimer);
 
