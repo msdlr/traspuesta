@@ -115,6 +115,12 @@ int main(int argc, char **argv)
    unsigned int op, debug;
    struct timeval start, stop;
 
+   #ifdef DOUBLE
+   	printf("[DOBLE PRECISION]\n"); 
+   #else
+   	printf("[SIMPLE PRECISION]\n"); 
+   #endif
+	
    if (argc == 6)
      {
        op = atoi(argv[1]);
