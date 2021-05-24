@@ -118,8 +118,9 @@ __global__ void CopyMat (element *Min, element *Mout, unsigned int mh, unsigned 
 	i = blockIdx.x * blockDim.x + threadIdx.x;
 	j = blockIdx.y * blockDim.y + threadIdx.y;
 
-	Mout[j*mw+i] = Min[j*mw+i];
-
+	if ( (j*mw+i) < (mh*mw) ){
+		Mout[j*mw+i] = Min[j*mw+i];
+	}
 }
 
 
@@ -210,27 +211,27 @@ int main(int argc, char **argv)
 	dim3 threads, grid;
 	
 	switch (op)
-		{
-		 case	0:
-		 case	3:
-		 case	4:
+	{
+		case	0:
+		case	3:
+		case	4:
 			if(mw>mh){			
-		BLOCK_SIZE =mw;
-	 }else BLOCK_SIZE = mh;			
-	 threads=dim3(BLOCK_SIZE,BLOCK_SIZE);
+				BLOCK_SIZE =mw;
+			} else BLOCK_SIZE = mh;			
+			threads=dim3(BLOCK_SIZE,BLOCK_SIZE);
 			grid=dim3((int)ceil((double)mw/threads.x),(int)ceil((double)mh/threads.y));
 			break;
-		 case	1:
+		case	1:
 			BLOCK_SIZE = (int)ceil(sqrt(mh));
-	 threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
+			threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
 			grid=dim3((int)ceil((double)mh/threads.x));
-	 break;
-		 case	2:
+			break;
+		case	2:
 			BLOCK_SIZE = (int)ceil(sqrt(mw));
-	 threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
+			threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
 			grid=dim3((int)ceil((double)mw/threads.x));
 			break;
-		}
+	}
 	printf("Block_size is <%d> <%d>\n", threads.x, threads.y);	
 	printf("Grid is <%d> <%d>,\n", grid.x, grid.y);
 	// timers
@@ -276,11 +277,11 @@ int main(int argc, char **argv)
 	sdkDeleteTimer(&hTimer);
 	printf("Tiempo de ejecucion del kernel (segs): %f s", timerValue);
 	totalbytes = 2 * sizeof(element) * mh * mw;
-	printf("	%f GBs\n",(totalbytes)/timerValue/1000000000);
+	printf("	%f GBs\n",(totalbytes)/timerValue/1E9);
 
 	timerValue = (stop.tv_sec + stop.tv_usec * 1e-6)-(start.tv_sec + start.tv_usec * 1e-6);
 	printf("Tiempo de ejecución total (segs) = %.6f",timerValue);
-	printf("	%f GBs\n",(totalbytes)/timerValue/1000000000);
+	printf("	%f GBs\n",(totalbytes)/timerValue/1E9);
 
 	return 0;
 }
