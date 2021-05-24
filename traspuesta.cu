@@ -100,7 +100,15 @@ __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh
 	}
 }
 __global__ void TransposeGM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
+	unsigned int x, y;
 
+	// Thread and block index
+	x = blockIdx.x * blockDim.x + threadIdx.x;
+	y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	d_Mout[x*mh+y] = d_Min[y*mw+x];
+	
+	if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
 }
 __global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
 
@@ -118,9 +126,9 @@ __global__ void CopyMat (element *Min, element *Mout, unsigned int mh, unsigned 
 	i = blockIdx.x * blockDim.x + threadIdx.x;
 	j = blockIdx.y * blockDim.y + threadIdx.y;
 
-	if ( (j*mw+i) < (mh*mw) ){
+	//if ( (j*mw+i) < (mh*mw) ){
 		Mout[j*mw+i] = Min[j*mw+i];
-	}
+	//}
 }
 
 
@@ -214,12 +222,9 @@ int main(int argc, char **argv)
 	{
 		case	0:
 		case	3:
-		case	4:
-			if(mw>mh){			
-				BLOCK_SIZE =mw;
-			} else BLOCK_SIZE = mh;			
-			threads=dim3(BLOCK_SIZE,BLOCK_SIZE);
-			grid=dim3((int)ceil((double)mw/threads.x),(int)ceil((double)mh/threads.y));
+		case	4:	
+			threads=dim3(mw,mh);
+			grid=dim3(mw/threads.x,mh/threads.y);
 			break;
 		case	1:
 			BLOCK_SIZE = (int)ceil(sqrt(mh));
