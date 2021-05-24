@@ -11,6 +11,7 @@ StopWatchInterface *hTimer = NULL;
 
 int BLOCK_SIZE = 0;
 
+
 #ifdef DOUBLE
 typedef double element; 
 #else
@@ -64,11 +65,27 @@ void sTransposeRow (element *Min, element *Mout, unsigned int mh, unsigned int m
 }
 
 __global__ void TransposeCol(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
+	unsigned int id_thread = (blockIdx.x*blockDim.x + threadIdx.x); // Columna -> identificador del hilo
+	unsigned int col = id_thread;
+	unsigned int fila = 0;
+	unsigned int in;	// Offsets para los punteros
+	unsigned int out; // Offsets para los punteros
 	
+	if (col < mw){
+	 for (fila = 0; fila < mh; fila++) { // Desde fila 0 hasta la máxima -1
+		in = (fila * mw) + col;	// Offset respecto a matriz de entrada
+		out = (col*mh) + fila;	// Offset respecto a matriz de salida
+		// mw será la anchura (mh) de la matriz traspuesta y viceversa !!!
+		d_Mout[out] = d_Min[in];
+		if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",fila,id_thread,id_thread,fila);
+	 }
+	}
+
 }
 __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
+	unsigned int id_thread = (blockIdx.x*blockDim.x + threadIdx.x); // Columna -> identificador del hilo
 	unsigned int col;
-	unsigned int fila = blockIdx.x*blockDim.x + threadIdx.x; // Fila = Identificador de hilo
+	unsigned int fila = id_thread; // Fila = Identificador de hilo
 	unsigned int in;	// Offsets para los punteros
 	unsigned int out; // Offsets para los punteros
 
@@ -78,7 +95,7 @@ __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh
 		out = (col*mh) + fila;	// Offset respecto a matriz de salida
 		// mh será la anchura (mw) de la matriz traspuesta y viceversa !!!
 		d_Mout[out] = d_Min[in];
-		if (debug == 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",(fila * mw)%mh,col,(fila*col)%mw,mh);
+		if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",id_thread,col,col,id_thread);
 	 }
 	}
 }
@@ -121,24 +138,23 @@ int main(int argc, char **argv)
 		printf("[SIMPLE PRECISION]\n"); 
 	#endif
 	
-	if (argc == 6)
+	if (argc == 5)
 		{
 		 op = atoi(argv[1]);
 		 mh = atoi(argv[2]);
 		 mw = atoi(argv[3]);
-		 BLOCK_SIZE = atoi(argv[4]);
-		 debug = atoi(argv[5]);
+		 debug = atoi(argv[4]);
 		}
 	else
 		{
-		 printf("Sintaxis: <ejecutable> option Mheight Mwidth BLOCK_SIZE debug\n\n");
+		 printf("Sintaxis: <ejecutable> option Mheight Mwidth debug\n\n");
 		 printf("option:	0	A thread copies a component of the matrix\n");
 		 printf("			1	A thread computes a row of the matrix\n");
 		 printf("			2	A thread computes a column of the matrix\n");
 		 printf("			3	A thread computes a component of the matrix (global memory)\n");
 		 printf("			4	A thread computes a component of the matrix (shared memory\n");
 		 printf("			5	Sequential transpose	(rows)\n");
-		 printf("\ndebug: 0 no, 1 sí (muestra las matrices)\n");	
+		 printf("\ndebug: 0 no, 1 (muestra las matrices), 2 (muestra los cambios en posiciones de las matrices)\n");	
 		 exit(0);
 		}
 
@@ -240,7 +256,7 @@ int main(int argc, char **argv)
 
 	// Print its value
 	//printf("\nPrinting Matrix traspuesta	%dx%d\n",mw,mh);
-	if (debug)
+	if (debug > 0)
 		{
 		 if (op==0)
 			PrintMatrix(Mout,mh,mw);		// copy
