@@ -9,7 +9,7 @@
 
 StopWatchInterface *hTimer = NULL;
 
-int BLOCK_SIZE = 0;
+#define BLOCK_SIZE 5 
 
 
 #ifdef DOUBLE
@@ -101,18 +101,38 @@ __global__ void TransposeRow(element * d_Min , element * d_Mout, unsigned int mh
 }
 __global__ void TransposeGM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
 	unsigned int x, y;
-
+	
 	// Thread and block index
 	x = blockIdx.x * blockDim.x + threadIdx.x;
 	y = blockIdx.y * blockDim.y + threadIdx.y;
-
-	d_Mout[x*mh+y] = d_Min[y*mw+x];
-	
-	if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
+	if ((x<mw)&&(y<mh))
+	{	
+		d_Mout[x*mh+y] = d_Min[y*mw+x];
+		if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
+	}
 }
+
 __global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
-
+	__shared__ element shared_region[BLOCK_SIZE*BLOCK_SIZE]; //static, known at compile time
+	unsigned int x, y;
+			
+	// Thread and block index
+	x = blockIdx.x * blockDim.x + threadIdx.x;
+	y = blockIdx.y * blockDim.y + threadIdx.y;
+	if ((x<mw)&&(y<mh))
+	{	
+		//if (debug > 1) printf("Hilo <%d,%d> (Bloque <%d,%d>)\n",threadIdx.x,threadIdx.y,blockIdx.x,blockIdx.y);
+		int index = threadIdx.x*BLOCK_SIZE + threadIdx.y;
+		shared_region[index] = d_Min[y*mw+x]; 
+		//__syncthreads();
+		//if (debug > 1)printf("SHARED pos <%d> = [%.0f]\n", index, shared_region[index]);
+		d_Mout[x*mh+y] = shared_region[index];
+		//if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
+	}
+		
 }
+
+
 
 // CUDA Kernels
 
@@ -223,16 +243,14 @@ int main(int argc, char **argv)
 		case	0:
 		case	3:
 		case	4:	
-			threads=dim3(mw,mh);
-			grid=dim3(mw/threads.x,mh/threads.y);
+			threads=dim3(BLOCK_SIZE,BLOCK_SIZE); // tam bloque -> 48*1024 / sizeof(element)
+			grid=dim3((int)ceil((double)mh/threads.x),(int)ceil((double)mw/threads.y));
 			break;
 		case	1:
-			BLOCK_SIZE = (int)ceil(sqrt(mh));
 			threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
 			grid=dim3((int)ceil((double)mh/threads.x));
 			break;
 		case	2:
-			BLOCK_SIZE = (int)ceil(sqrt(mw));
 			threads=dim3(BLOCK_SIZE*BLOCK_SIZE);
 			grid=dim3((int)ceil((double)mw/threads.x));
 			break;
