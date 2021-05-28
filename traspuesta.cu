@@ -6,16 +6,22 @@
 #include <helper_cuda.h>
 #include <helper_timer.h>
 #include <math.h>
+#include <sys/stat.h>
+struct stat st;
 
 StopWatchInterface *hTimer = NULL;
 
-#define BLOCK_SIZE 5 
+#define BLOCK_SIZE 32 
 
+#define HEADER_ROW "KERNEL; W;H; TIME(kernel);TIME(total);GB/s (kernel)\n"
+#define APPEND "a"
 
 #ifdef DOUBLE
 typedef double element; 
+#define FILENAME "res_dp.csv"
 #else
 typedef float element; 
+#define FILENAME "res_sp.csv"
 #endif
 
 // Function for generating random values for a matrix
@@ -105,11 +111,11 @@ __global__ void TransposeGM(element * d_Min , element * d_Mout, unsigned int mh,
 	// Thread and block index
 	x = blockIdx.x * blockDim.x + threadIdx.x;
 	y = blockIdx.y * blockDim.y + threadIdx.y;
-	if ((x<mw)&&(y<mh))
-	{	
+	//if ((x<mw)&&(y<mh))
+	//{	
 		d_Mout[x*mh+y] = d_Min[y*mw+x];
-		if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
-	}
+		//if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
+	//}
 }
 
 __global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh, unsigned int mw, unsigned int debug){
@@ -119,7 +125,7 @@ __global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh,
 	// Thread and block index
 	x = blockIdx.x * blockDim.x + threadIdx.x;
 	y = blockIdx.y * blockDim.y + threadIdx.y;
-	if ((x<mw)&&(y<mh))
+	//if ((x<mw)&&(y<mh))
 	{	
 		//if (debug > 1) printf("Hilo <%d,%d> (Bloque <%d,%d>)\n",threadIdx.x,threadIdx.y,blockIdx.x,blockIdx.y);
 		int index = threadIdx.x*BLOCK_SIZE + threadIdx.y;
@@ -127,7 +133,10 @@ __global__ void TransposeSM(element * d_Min , element * d_Mout, unsigned int mh,
 		//__syncthreads();
 		//if (debug > 1)printf("SHARED pos <%d> = [%.0f]\n", index, shared_region[index]);
 		d_Mout[x*mh+y] = shared_region[index];
-		//if (debug > 1) printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
+		//if (debug > 1)
+		//{
+		//	printf("d_Mout[%d][%d] = d_Min[%d][%d]\n",y,x,x,y);
+		//}			
 	}
 		
 }
@@ -146,9 +155,10 @@ __global__ void CopyMat (element *Min, element *Mout, unsigned int mh, unsigned 
 	i = blockIdx.x * blockDim.x + threadIdx.x;
 	j = blockIdx.y * blockDim.y + threadIdx.y;
 
-	//if ( (j*mw+i) < (mh*mw) ){
+	//if ( (j*mw+i) < (mh*mw) )
+	{
 		Mout[j*mw+i] = Min[j*mw+i];
-	//}
+	}
 }
 
 
@@ -166,6 +176,8 @@ int main(int argc, char **argv)
 	#else
 		printf("[SIMPLE PRECISION]\n"); 
 	#endif
+	
+
 	
 	if (argc == 5)
 		{
@@ -189,6 +201,10 @@ int main(int argc, char **argv)
 
 	// kernel pointer
 	void (*kernel)(element *, element *, unsigned int, unsigned int, unsigned int /* debug */);
+	
+	// Fichero de salida
+	FILE *myFile;
+	myFile = fopen(FILENAME, APPEND);
 
 	switch (op)
 		{
@@ -206,7 +222,7 @@ int main(int argc, char **argv)
 
 	srandom(12345);
 
-	float timerValue;
+	float timerValue, t_kernel, t_total;
 	double totalbytes;
 
 	// Define matrix at host
@@ -298,13 +314,29 @@ int main(int argc, char **argv)
 	timerValue = sdkGetTimerValue(&hTimer);
 	timerValue = timerValue / 1000;
 	sdkDeleteTimer(&hTimer);
+	t_kernel = timerValue;
 	printf("Tiempo de ejecucion del kernel (segs): %f s", timerValue);
 	totalbytes = 2 * sizeof(element) * mh * mw;
-	printf("	%f GBs\n",(totalbytes)/timerValue/1E9);
+	printf("\tKernel B/W	%f GB/s\n",(totalbytes)/timerValue/1E9);
 
 	timerValue = (stop.tv_sec + stop.tv_usec * 1e-6)-(start.tv_sec + start.tv_usec * 1e-6);
 	printf("Tiempo de ejecución total (segs) = %.6f",timerValue);
-	printf("	%f GBs\n",(totalbytes)/timerValue/1E9);
-
+	
+	t_total = timerValue;
+	printf("\tTotal B/W	%f GB/s\n",(totalbytes)/timerValue/1E9);
+	
+	
+	stat(FILENAME, &st);
+	unsigned int size = st.st_size;
+	
+	if (size == 0){
+		if (debug == 1) printf("1a ejecucion\n");
+		fprintf(myFile, HEADER_ROW);
+	}
+	
+	// HEADER_ROW "KERNEL, W,H, TIME(kernel),TIME(total),GB/s (kernel)\n"
+	fprintf(myFile,"%d;%d;%d;%f;%f;%lf\n",op, mw,mh,t_kernel, t_total,(totalbytes)/t_kernel/1E9);
+	fclose(myFile);
+	
 	return 0;
 }
